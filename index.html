@@ -1,0 +1,33 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" 
+        "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="es">
+<head>
+
+</head>
+<body>
+
+<div id="console"></div>
+
+<script type=text/javascript">
+var worker = new Worker("worker.js");
+
+worker.onmessage = function (event) {
+  var message = event.data;
+  if (message.type == "ready") {
+    outputElement.textContent = "Loaded";
+    worker.postMessage({
+      type: 'command',
+      arguments: ['-help']
+    })
+  } else if (message.type == "stdout") {
+    outputElement.textContent += message.data + "\n";
+  } else if (message.type == "start") {
+    outputElement.textContent = "Worker has received command\n";
+  }
+};
+
+
+</script>
+
+</body>
+</html>
