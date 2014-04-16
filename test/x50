@@ -1,0 +1,1000 @@
+            while ((middleDashMatch = /([^\-])\-([^\-])/.exec(scanList))) {
+              var rangeStartCharCode = middleDashMatch[1].charCodeAt(0);
+              var rangeEndCharCode = middleDashMatch[2].charCodeAt(0);
+              for (var expanded = ''; rangeStartCharCode <= rangeEndCharCode; expanded += String.fromCharCode(rangeStartCharCode++));
+              scanList = scanList.replace(middleDashMatch[1] + '-' + middleDashMatch[2], expanded);
+            }
+  
+            var argPtr = HEAP32[(((varargs)+(argIndex))>>2)];
+            argIndex += Runtime.getAlignSize('void*', null, true);
+            fields++;
+  
+            for (var i = 0; i < maxNumCharacters; i++) {
+              next = get();
+              if (negateScanList) {
+                if (scanList.indexOf(String.fromCharCode(next)) < 0) {
+                  HEAP8[((argPtr++)|0)]=next;
+                } else {
+                  unget();
+                  break;
+                }
+              } else {
+                if (scanList.indexOf(String.fromCharCode(next)) >= 0) {
+                  HEAP8[((argPtr++)|0)]=next;
+                } else {
+                  unget();
+                  break;
+                }
+              }
+            }
+  
+            // write out null-terminating character
+            HEAP8[((argPtr++)|0)]=0;
+            formatIndex += match[0].length;
+            
+            continue;
+          }
+        }      
+        // remove whitespace
+        while (1) {
+          next = get();
+          if (next == 0) return fields;
+          if (!(next in __scanString.whiteSpace)) break;
+        }
+        unget();
+  
+        if (format[formatIndex] === '%') {
+          formatIndex++;
+          var suppressAssignment = false;
+          if (format[formatIndex] == '*') {
+            suppressAssignment = true;
+            formatIndex++;
+          }
+          var maxSpecifierStart = formatIndex;
+          while (format[formatIndex].charCodeAt(0) >= 48 &&
+                 format[formatIndex].charCodeAt(0) <= 57) {
+            formatIndex++;
+          }
+          var max_;
+          if (formatIndex != maxSpecifierStart) {
+            max_ = parseInt(format.slice(maxSpecifierStart, formatIndex), 10);
+          }
+          var long_ = false;
+          var half = false;
+          var longLong = false;
+          if (format[formatIndex] == 'l') {
+            long_ = true;
+            formatIndex++;
+            if (format[formatIndex] == 'l') {
+              longLong = true;
+              formatIndex++;
+            }
+          } else if (format[formatIndex] == 'h') {
+            half = true;
+            formatIndex++;
+          }
+          var type = format[formatIndex];
+          formatIndex++;
+          var curr = 0;
+          var buffer = [];
+          // Read characters according to the format. floats are trickier, they may be in an unfloat state in the middle, then be a valid float later
+          if (type == 'f' || type == 'e' || type == 'g' ||
+              type == 'F' || type == 'E' || type == 'G') {
+            next = get();
+            while (next > 0 && (!(next in __scanString.whiteSpace)))  {
+              buffer.push(String.fromCharCode(next));
+              next = get();
+            }
+            var m = __getFloat(buffer.join(''));
+            var last = m ? m[0].length : 0;
+            for (var i = 0; i < buffer.length - last + 1; i++) {
+              unget();
+            }
+            buffer.length = last;
+          } else {
+            next = get();
+            var first = true;
+            
+            // Strip the optional 0x prefix for %x.
+            if ((type == 'x' || type == 'X') && (next == 48)) {
+              var peek = get();
+              if (peek == 120 || peek == 88) {
+                next = get();
+              } else {
+                unget();
+              }
+            }
+            
+            while ((curr < max_ || isNaN(max_)) && next > 0) {
+              if (!(next in __scanString.whiteSpace) && // stop on whitespace
+                  (type == 's' ||
+                   ((type === 'd' || type == 'u' || type == 'i') && ((next >= 48 && next <= 57) ||
+                                                                     (first && next == 45))) ||
+                   ((type === 'x' || type === 'X') && (next >= 48 && next <= 57 ||
+                                     next >= 97 && next <= 102 ||
+                                     next >= 65 && next <= 70))) &&
+                  (formatIndex >= format.length || next !== format[formatIndex].charCodeAt(0))) { // Stop when we read something that is coming up
+                buffer.push(String.fromCharCode(next));
+                next = get();
+                curr++;
+                first = false;
+              } else {
+                break;
+              }
+            }
+            unget();
+          }
+          if (buffer.length === 0) return 0;  // Failure.
+          if (suppressAssignment) continue;
+  
+          var text = buffer.join('');
+          var argPtr = HEAP32[(((varargs)+(argIndex))>>2)];
+          argIndex += Runtime.getAlignSize('void*', null, true);
+          switch (type) {
+            case 'd': case 'u': case 'i':
+              if (half) {
+                HEAP16[((argPtr)>>1)]=parseInt(text, 10);
+              } else if (longLong) {
+                (tempI64 = [parseInt(text, 10)>>>0,(tempDouble=parseInt(text, 10),Math_abs(tempDouble) >= 1 ? (tempDouble > 0 ? Math_min(Math_floor((tempDouble)/4294967296), 4294967295)>>>0 : (~~(Math_ceil((tempDouble - +(((~~(tempDouble)))>>>0))/4294967296)))>>>0) : 0)],HEAP32[((argPtr)>>2)]=tempI64[0],HEAP32[(((argPtr)+(4))>>2)]=tempI64[1]);
+              } else {
+                HEAP32[((argPtr)>>2)]=parseInt(text, 10);
+              }
+              break;
+            case 'X':
+            case 'x':
+              HEAP32[((argPtr)>>2)]=parseInt(text, 16);
+              break;
+            case 'F':
+            case 'f':
+            case 'E':
+            case 'e':
+            case 'G':
+            case 'g':
+            case 'E':
+              // fallthrough intended
+              if (long_) {
+                HEAPF64[((argPtr)>>3)]=parseFloat(text);
+              } else {
+                HEAPF32[((argPtr)>>2)]=parseFloat(text);
+              }
+              break;
+            case 's':
+              var array = intArrayFromString(text);
+              for (var j = 0; j < array.length; j++) {
+                HEAP8[(((argPtr)+(j))|0)]=array[j];
+              }
+              break;
+          }
+          fields++;
+        } else if (format[formatIndex].charCodeAt(0) in __scanString.whiteSpace) {
+          next = get();
+          while (next in __scanString.whiteSpace) {
+            if (next <= 0) break mainLoop;  // End of input.
+            next = get();
+          }
+          unget(next);
+          formatIndex++;
+        } else {
+          // Not a specifier.
+          next = get();
+          if (format[formatIndex].charCodeAt(0) !== next) {
+            unget(next);
+            break mainLoop;
+          }
+          formatIndex++;
+        }
+      }
+      return fields;
+    }function _sscanf(s, format, varargs) {
+      // int sscanf(const char *restrict s, const char *restrict format, ... );
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/scanf.html
+      var index = 0;
+      function get() { return HEAP8[(((s)+(index++))|0)]; };
+      function unget() { index--; };
+      return __scanString(format, get, unget, varargs);
+    }
+
+  
+  
+  function _isspace(chr) {
+      return (chr == 32) || (chr >= 9 && chr <= 13);
+    }function __parseInt(str, endptr, base, min, max, bits, unsign) {
+      // Skip space.
+      while (_isspace(HEAP8[(str)])) str++;
+  
+      // Check for a plus/minus sign.
+      var multiplier = 1;
+      if (HEAP8[(str)] == 45) {
+        multiplier = -1;
+        str++;
+      } else if (HEAP8[(str)] == 43) {
+        str++;
+      }
+  
+      // Find base.
+      var finalBase = base;
+      if (!finalBase) {
+        if (HEAP8[(str)] == 48) {
+          if (HEAP8[((str+1)|0)] == 120 ||
+              HEAP8[((str+1)|0)] == 88) {
+            finalBase = 16;
+            str += 2;
+          } else {
+            finalBase = 8;
+            str++;
+          }
+        }
+      } else if (finalBase==16) {
+        if (HEAP8[(str)] == 48) {
+          if (HEAP8[((str+1)|0)] == 120 ||
+              HEAP8[((str+1)|0)] == 88) {
+            str += 2;
+          }
+        }
+      }
+      if (!finalBase) finalBase = 10;
+  
+      // Get digits.
+      var chr;
+      var ret = 0;
+      while ((chr = HEAP8[(str)]) != 0) {
+        var digit = parseInt(String.fromCharCode(chr), finalBase);
+        if (isNaN(digit)) {
+          break;
+        } else {
+          ret = ret * finalBase + digit;
+          str++;
+        }
+      }
+  
+      // Apply sign.
+      ret *= multiplier;
+  
+      // Set end pointer.
+      if (endptr) {
+        HEAP32[((endptr)>>2)]=str;
+      }
+  
+      // Unsign if needed.
+      if (unsign) {
+        if (Math.abs(ret) > max) {
+          ret = max;
+          ___setErrNo(ERRNO_CODES.ERANGE);
+        } else {
+          ret = unSign(ret, bits);
+        }
+      }
+  
+      // Validate range.
+      if (ret > max || ret < min) {
+        ret = ret > max ? max : min;
+        ___setErrNo(ERRNO_CODES.ERANGE);
+      }
+  
+      if (bits == 64) {
+        return tempRet0 = (tempDouble=ret,Math_abs(tempDouble) >= 1 ? (tempDouble > 0 ? Math_min(Math_floor((tempDouble)/4294967296), 4294967295)>>>0 : (~~(Math_ceil((tempDouble - +(((~~(tempDouble)))>>>0))/4294967296)))>>>0) : 0),ret>>>0;
+      }
+  
+      return ret;
+    }function _strtol(str, endptr, base) {
+      return __parseInt(str, endptr, base, -2147483648, 2147483647, 32);  // LONG_MIN, LONG_MAX.
+    }
+
+  function _strrchr(ptr, chr) {
+      var ptr2 = ptr + _strlen(ptr);
+      do {
+        if (HEAP8[(ptr2)] == chr) return ptr2;
+        ptr2--;
+      } while (ptr2 >= ptr);
+      return 0;
+    }
+
+  function _abort() {
+      Module['abort']();
+    }
+
+
+
+  function _signal(sig, func) {
+      // TODO
+      return 0;
+    }
+
+  
+  
+  
+  
+  var _environ=allocate(1, "i32*", ALLOC_STATIC);var ___environ=_environ;function ___buildEnvironment(env) {
+      // WARNING: Arbitrary limit!
+      var MAX_ENV_VALUES = 64;
+      var TOTAL_ENV_SIZE = 1024;
+  
+      // Statically allocate memory for the environment.
+      var poolPtr;
+      var envPtr;
+      if (!___buildEnvironment.called) {
+        ___buildEnvironment.called = true;
+        // Set default values. Use string keys for Closure Compiler compatibility.
+        ENV['USER'] = 'root';
+        ENV['PATH'] = '/';
+        ENV['PWD'] = '/';
+        ENV['HOME'] = '/home/emscripten';
+        ENV['LANG'] = 'en_US.UTF-8';
+        ENV['_'] = './this.program';
+        // Allocate memory.
+        poolPtr = allocate(TOTAL_ENV_SIZE, 'i8', ALLOC_STATIC);
+        envPtr = allocate(MAX_ENV_VALUES * 4,
+                          'i8*', ALLOC_STATIC);
+        HEAP32[((envPtr)>>2)]=poolPtr;
+        HEAP32[((_environ)>>2)]=envPtr;
+      } else {
+        envPtr = HEAP32[((_environ)>>2)];
+        poolPtr = HEAP32[((envPtr)>>2)];
+      }
+  
+      // Collect key=value lines.
+      var strings = [];
+      var totalSize = 0;
+      for (var key in env) {
+        if (typeof env[key] === 'string') {
+          var line = key + '=' + env[key];
+          strings.push(line);
+          totalSize += line.length;
+        }
+      }
+      if (totalSize > TOTAL_ENV_SIZE) {
+        throw new Error('Environment size exceeded TOTAL_ENV_SIZE!');
+      }
+  
+      // Make new.
+      var ptrSize = 4;
+      for (var i = 0; i < strings.length; i++) {
+        var line = strings[i];
+        writeAsciiToMemory(line, poolPtr);
+        HEAP32[(((envPtr)+(i * ptrSize))>>2)]=poolPtr;
+        poolPtr += line.length + 1;
+      }
+      HEAP32[(((envPtr)+(strings.length * ptrSize))>>2)]=0;
+    }var ENV={};function _getenv(name) {
+      // char *getenv(const char *name);
+      // http://pubs.opengroup.org/onlinepubs/009695399/functions/getenv.html
+      if (name === 0) return 0;
+      name = Pointer_stringify(name);
+      if (!ENV.hasOwnProperty(name)) return 0;
+  
+      if (_getenv.ret) _free(_getenv.ret);
+      _getenv.ret = allocate(intArrayFromString(ENV[name]), 'i8', ALLOC_NORMAL);
+      return _getenv.ret;
+    }
+
+  function _atoi(ptr) {
+      return _strtol(ptr, null, 10);
+    }
+
+  
+  function _fputc(c, stream) {
+      // int fputc(int c, FILE *stream);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/fputc.html
+      var chr = unSign(c & 0xFF);
+      HEAP8[((_fputc.ret)|0)]=chr;
+      var fd = _fileno(stream);
+      var ret = _write(fd, _fputc.ret, 1);
+      if (ret == -1) {
+        var streamObj = FS.getStreamFromPtr(stream);
+        if (streamObj) streamObj.error = true;
+        return -1;
+      } else {
+        return chr;
+      }
+    }function _putchar(c) {
+      // int putchar(int c);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/putchar.html
+      return _fputc(c, HEAP32[((_stdout)>>2)]);
+    }
+
+
+  function _tcsetattr(fildes, optional_actions, termios_p) {
+      // http://pubs.opengroup.org/onlinepubs/7908799/xsh/tcsetattr.html
+      var stream = FS.getStream(fildes);
+      if (!stream) {
+        ___setErrNo(ERRNO_CODES.EBADF);
+        return -1;
+      }
+      if (!stream.tty) {
+        ___setErrNo(ERRNO_CODES.ENOTTY);
+        return -1;
+      }
+      return 0;
+    }
+
+  function _isatty(fildes) {
+      // int isatty(int fildes);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/isatty.html
+      var stream = FS.getStream(fildes);
+      if (!stream) {
+        ___setErrNo(ERRNO_CODES.EBADF);
+        return 0;
+      }
+      // HACK - implement tcgetattr
+      if (!stream.tty) {
+        ___setErrNo(ERRNO_CODES.ENOTTY);
+        return 0;
+      }
+      return 1;
+    }
+
+  function _tcgetattr(fildes, termios_p) {
+      // http://pubs.opengroup.org/onlinepubs/009695399/functions/tcgetattr.html
+      var stream = FS.getStream(fildes);
+      if (!stream) {
+        ___setErrNo(ERRNO_CODES.EBADF);
+        return -1;
+      }
+      if (!stream.tty) {
+        ___setErrNo(ERRNO_CODES.ENOTTY);
+        return -1;
+      }
+      return 0;
+    }
+
+  function _setvbuf(stream, buf, type, size) {
+      // int setvbuf(FILE *restrict stream, char *restrict buf, int type, size_t size);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/setvbuf.html
+      // TODO: Implement custom buffering.
+      return 0;
+    }
+
+  
+  function _open(path, oflag, varargs) {
+      // int open(const char *path, int oflag, ...);
+      // http://pubs.opengroup.org/onlinepubs/009695399/functions/open.html
+      var mode = HEAP32[((varargs)>>2)];
+      path = Pointer_stringify(path);
+      try {
+        var stream = FS.open(path, oflag, mode);
+        return stream.fd;
+      } catch (e) {
+        FS.handleFSError(e);
+        return -1;
+      }
+    }function _fopen(filename, mode) {
+      // FILE *fopen(const char *restrict filename, const char *restrict mode);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/fopen.html
+      var flags;
+      mode = Pointer_stringify(mode);
+      if (mode[0] == 'r') {
+        if (mode.indexOf('+') != -1) {
+          flags = 2;
+        } else {
+          flags = 0;
+        }
+      } else if (mode[0] == 'w') {
+        if (mode.indexOf('+') != -1) {
+          flags = 2;
+        } else {
+          flags = 1;
+        }
+        flags |= 64;
+        flags |= 512;
+      } else if (mode[0] == 'a') {
+        if (mode.indexOf('+') != -1) {
+          flags = 2;
+        } else {
+          flags = 1;
+        }
+        flags |= 64;
+        flags |= 1024;
+      } else {
+        ___setErrNo(ERRNO_CODES.EINVAL);
+        return 0;
+      }
+      var fd = _open(filename, flags, allocate([0x1FF, 0, 0, 0], 'i32', ALLOC_STACK));  // All creation permissions.
+      return fd === -1 ? 0 : FS.getPtrForStream(FS.getStream(fd));
+    }
+
+  
+  
+  function _fputs(s, stream) {
+      // int fputs(const char *restrict s, FILE *restrict stream);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/fputs.html
+      var fd = _fileno(stream);
+      return _write(fd, s, _strlen(s));
+    }function _puts(s) {
+      // int puts(const char *s);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/puts.html
+      // NOTE: puts() always writes an extra newline.
+      var stdout = HEAP32[((_stdout)>>2)];
+      var ret = _fputs(s, stdout);
+      if (ret < 0) {
+        return ret;
+      } else {
+        var newlineRet = _fputc(10, stdout);
+        return (newlineRet < 0) ? -1 : ret + 1;
+      }
+    }
+  
+  
+  function _strerror_r(errnum, strerrbuf, buflen) {
+      if (errnum in ERRNO_MESSAGES) {
+        if (ERRNO_MESSAGES[errnum].length > buflen - 1) {
+          return ___setErrNo(ERRNO_CODES.ERANGE);
+        } else {
+          var msg = ERRNO_MESSAGES[errnum];
+          writeAsciiToMemory(msg, strerrbuf);
+          return 0;
+        }
+      } else {
+        return ___setErrNo(ERRNO_CODES.EINVAL);
+      }
+    }function _strerror(errnum) {
+      if (!_strerror.buffer) _strerror.buffer = _malloc(256);
+      _strerror_r(errnum, _strerror.buffer, 256);
+      return _strerror.buffer;
+    }
+  
+  function ___errno_location() {
+      return ___errno_state;
+    }function _perror(s) {
+      // void perror(const char *s);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/perror.html
+      var stdout = HEAP32[((_stdout)>>2)];
+      if (s) {
+        _fputs(s, stdout);
+        _fputc(58, stdout);
+        _fputc(32, stdout);
+      }
+      var errnum = HEAP32[((___errno_location())>>2)];
+      _puts(_strerror(errnum));
+    }
+
+  var _log=Math_log;
+
+  var _llvm_va_start=undefined;
+
+  function _vsnprintf(s, n, format, va_arg) {
+      return _snprintf(s, n, format, HEAP32[((va_arg)>>2)]);
+    }
+
+  function _llvm_va_end() {}
+
+  
+  function _rint(x) {
+      if (Math.abs(x % 1) !== 0.5) return Math.round(x);
+      return x + x % 2 + ((x < 0) ? 1 : -1);
+    }var _lrintf=_rint;
+
+  function _log2(x) {
+      return Math.log(x) / Math.LN2;
+    }
+
+  var _lrint=_rint;
+
+  
+  
+  function _ungetc(c, stream) {
+      // int ungetc(int c, FILE *stream);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/ungetc.html
+      stream = FS.getStreamFromPtr(stream);
+      if (!stream) {
+        return -1;
+      }
+      if (c === -1) {
+        // do nothing for EOF character
+        return c;
+      }
+      c = unSign(c & 0xFF);
+      stream.ungotten.push(c);
+      stream.eof = false;
+      return c;
+    }function _fscanf(stream, format, varargs) {
+      // int fscanf(FILE *restrict stream, const char *restrict format, ... );
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/scanf.html
+      var streamObj = FS.getStreamFromPtr(stream);
+      if (!streamObj) {
+        return -1;
+      }
+      var buffer = [];
+      function get() {
+        var c = _fgetc(stream);
+        buffer.push(c);
+        return c;
+      };
+      function unget() {
+        _ungetc(buffer.pop(), stream);
+      };
+      return __scanString(format, get, unget, varargs);
+    }function _scanf(format, varargs) {
+      // int scanf(const char *restrict format, ... );
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/scanf.html
+      var stdin = HEAP32[((_stdin)>>2)];
+      return _fscanf(stdin, format, varargs);
+    }
+
+  
+  var ___DEFAULT_POLLMASK=5;function _select(nfds, readfds, writefds, exceptfds, timeout) {
+      // readfds are supported,
+      // writefds checks socket open status
+      // exceptfds not supported
+      // timeout is always 0 - fully async
+      assert(nfds <= 64, 'nfds must be less than or equal to 64');  // fd sets have 64 bits
+      assert(!exceptfds, 'exceptfds not supported');
+  
+      var total = 0;
+      
+      var srcReadLow = (readfds ? HEAP32[((readfds)>>2)] : 0),
+          srcReadHigh = (readfds ? HEAP32[(((readfds)+(4))>>2)] : 0);
+      var srcWriteLow = (writefds ? HEAP32[((writefds)>>2)] : 0),
+          srcWriteHigh = (writefds ? HEAP32[(((writefds)+(4))>>2)] : 0);
+      var srcExceptLow = (exceptfds ? HEAP32[((exceptfds)>>2)] : 0),
+          srcExceptHigh = (exceptfds ? HEAP32[(((exceptfds)+(4))>>2)] : 0);
+  
+      var dstReadLow = 0,
+          dstReadHigh = 0;
+      var dstWriteLow = 0,
+          dstWriteHigh = 0;
+      var dstExceptLow = 0,
+          dstExceptHigh = 0;
+  
+      var allLow = (readfds ? HEAP32[((readfds)>>2)] : 0) |
+                   (writefds ? HEAP32[((writefds)>>2)] : 0) |
+                   (exceptfds ? HEAP32[((exceptfds)>>2)] : 0);
+      var allHigh = (readfds ? HEAP32[(((readfds)+(4))>>2)] : 0) |
+                    (writefds ? HEAP32[(((writefds)+(4))>>2)] : 0) |
+                    (exceptfds ? HEAP32[(((exceptfds)+(4))>>2)] : 0);
+  
+      function get(fd, low, high, val) {
+        return (fd < 32 ? (low & val) : (high & val));
+      }
+  
+      for (var fd = 0; fd < nfds; fd++) {
+        var mask = 1 << (fd % 32);
+        if (!(get(fd, allLow, allHigh, mask))) {
+          continue;  // index isn't in the set
+        }
+  
+        var stream = FS.getStream(fd);
+        if (!stream) {
+          ___setErrNo(ERRNO_CODES.EBADF);
+          return -1;
+        }
+  
+        var flags = ___DEFAULT_POLLMASK;
+  
+        if (stream.stream_ops.poll) {
+          flags = stream.stream_ops.poll(stream);
+        }
+  
+        if ((flags & 1) && get(fd, srcReadLow, srcReadHigh, mask)) {
+          fd < 32 ? (dstReadLow = dstReadLow | mask) : (dstReadHigh = dstReadHigh | mask);
+          total++;
+        }
+        if ((flags & 4) && get(fd, srcWriteLow, srcWriteHigh, mask)) {
+          fd < 32 ? (dstWriteLow = dstWriteLow | mask) : (dstWriteHigh = dstWriteHigh | mask);
+          total++;
+        }
+        if ((flags & 2) && get(fd, srcExceptLow, srcExceptHigh, mask)) {
+          fd < 32 ? (dstExceptLow = dstExceptLow | mask) : (dstExceptHigh = dstExceptHigh | mask);
+          total++;
+        }
+      }
+  
+      if (readfds) {
+        HEAP32[((readfds)>>2)]=dstReadLow;
+        HEAP32[(((readfds)+(4))>>2)]=dstReadHigh;
+      }
+      if (writefds) {
+        HEAP32[((writefds)>>2)]=dstWriteLow;
+        HEAP32[(((writefds)+(4))>>2)]=dstWriteHigh;
+      }
+      if (exceptfds) {
+        HEAP32[((exceptfds)>>2)]=dstExceptLow;
+        HEAP32[(((exceptfds)+(4))>>2)]=dstExceptHigh;
+      }
+      
+      return total;
+    }
+
+
+
+
+  function _qsort(base, num, size, cmp) {
+      if (num == 0 || size == 0) return;
+      // forward calls to the JavaScript sort method
+      // first, sort the items logically
+      var keys = [];
+      for (var i = 0; i < num; i++) keys.push(i);
+      keys.sort(function(a, b) {
+        return FUNCTION_TABLE[cmp](base+a*size, base+b*size);
+      });
+      // apply the sort
+      var temp = _malloc(num*size);
+      _memcpy(temp, base, num*size);
+      for (var i = 0; i < num; i++) {
+        if (keys[i] == i) continue; // already in place
+        _memcpy(base+i*size, temp+keys[i]*size, size);
+      }
+      _free(temp);
+    }
+
+  function _getrusage(resource, rlp) {
+      // int getrusage(int resource, struct rusage *rlp);
+      HEAP32[((rlp)>>2)]=1;
+      HEAP32[(((rlp)+(4))>>2)]=2;
+      HEAP32[(((rlp)+(8))>>2)]=3;
+      HEAP32[(((rlp)+(12))>>2)]=4;
+      return 0;
+    }
+
+
+  function _vfprintf(s, f, va_arg) {
+      return _fprintf(s, f, HEAP32[((va_arg)>>2)]);
+    }
+
+  
+  function __exit(status) {
+      // void _exit(int status);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/exit.html
+      Module['exit'](status);
+    }function _exit(status) {
+      __exit(status);
+    }
+
+
+  function _strstr(ptr1, ptr2) {
+      var check = 0, start;
+      do {
+        if (!check) {
+          start = ptr1;
+          check = ptr2;
+        }
+        var curr1 = HEAP8[((ptr1++)|0)];
+        var curr2 = HEAP8[((check++)|0)];
+        if (curr2 == 0) return start;
+        if (curr2 != curr1) {
+          // rewind to one character after start, to find ez in eeez
+          ptr1 = start + 1;
+          check = 0;
+        }
+      } while (curr1);
+      return 0;
+    }
+
+  function _setrlimit(resource, rlp) {
+      // int setrlimit(int resource, const struct rlimit *rlp)
+      return 0;
+    }
+
+  function _getchar() {
+      // int getchar(void);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/getchar.html
+      return _fgetc(HEAP32[((_stdin)>>2)]);
+    }
+
+  
+  function _lseek(fildes, offset, whence) {
+      // off_t lseek(int fildes, off_t offset, int whence);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/lseek.html
+      var stream = FS.getStream(fildes);
+      if (!stream) {
+        ___setErrNo(ERRNO_CODES.EBADF);
+        return -1;
+      }
+      try {
+        return FS.llseek(stream, offset, whence);
+      } catch (e) {
+        FS.handleFSError(e);
+        return -1;
+      }
+    }function _fseek(stream, offset, whence) {
+      // int fseek(FILE *stream, long offset, int whence);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/fseek.html
+      var fd = _fileno(stream);
+      var ret = _lseek(fd, offset, whence);
+      if (ret == -1) {
+        return -1;
+      }
+      stream = FS.getStreamFromPtr(stream);
+      stream.eof = false;
+      return 0;
+    }
+
+  function _ftell(stream) {
+      // long ftell(FILE *stream);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/ftell.html
+      stream = FS.getStreamFromPtr(stream);
+      if (!stream) {
+        ___setErrNo(ERRNO_CODES.EBADF);
+        return -1;
+      }
+      if (FS.isChrdev(stream.node.mode)) {
+        ___setErrNo(ERRNO_CODES.ESPIPE);
+        return -1;
+      } else {
+        return stream.position;
+      }
+    }
+
+
+  function _ferror(stream) {
+      // int ferror(FILE *stream);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/ferror.html
+      stream = FS.getStreamFromPtr(stream);
+      return Number(stream && stream.error);
+    }
+
+  function _llvm_va_copy(ppdest, ppsrc) {
+      // copy the list start
+      HEAP8[(ppdest)]=HEAP8[(ppsrc)];HEAP8[(((ppdest)+(1))|0)]=HEAP8[(((ppsrc)+(1))|0)];HEAP8[(((ppdest)+(2))|0)]=HEAP8[(((ppsrc)+(2))|0)];HEAP8[(((ppdest)+(3))|0)]=HEAP8[(((ppsrc)+(3))|0)];
+      
+      // copy the list's current offset (will be advanced with each call to va_arg)
+      HEAP8[(((ppdest+4))|0)]=HEAP8[(((ppsrc+4))|0)];HEAP8[((((ppdest+4))+(1))|0)]=HEAP8[((((ppsrc+4))+(1))|0)];HEAP8[((((ppdest+4))+(2))|0)]=HEAP8[((((ppsrc+4))+(2))|0)];HEAP8[((((ppdest+4))+(3))|0)]=HEAP8[((((ppsrc+4))+(3))|0)];
+    }
+
+
+  var _cos=Math_cos;
+
+  var _sqrt=Math_sqrt;
+
+  var _sin=Math_sin;
+
+  function _hypot(a, b) {
+       return Math.sqrt(a*a + b*b);
+    }
+
+  function _cbrt(x) {
+      return Math.pow(x, 1/3);
+    }
+
+  
+  function _memmove(dest, src, num) {
+      dest = dest|0; src = src|0; num = num|0;
+      var ret = 0;
+      if (((src|0) < (dest|0)) & ((dest|0) < ((src + num)|0))) {
+        // Unlikely case: Copy backwards in a safe manner
+        ret = dest;
+        src = (src + num)|0;
+        dest = (dest + num)|0;
+        while ((num|0) > 0) {
+          dest = (dest - 1)|0;
+          src = (src - 1)|0;
+          num = (num - 1)|0;
+          HEAP8[(dest)]=HEAP8[(src)];
+        }
+        dest = ret;
+      } else {
+        _memcpy(dest, src, num) | 0;
+      }
+      return dest | 0;
+    }var _llvm_memmove_p0i8_p0i8_i32=_memmove;
+
+
+  var _sqrtf=Math_sqrt;
+
+  var _fabs=Math_abs;
+
+  var _ceilf=Math_ceil;
+
+  function _strspn(pstr, pset) {
+      var str = pstr, set, strcurr, setcurr;
+      while (1) {
+        strcurr = HEAP8[(str)];
+        if (!strcurr) return str - pstr;
+        set = pset;
+        while (1) {
+          setcurr = HEAP8[(set)];
+          if (!setcurr || setcurr == strcurr) break;
+          set++;
+        }
+        if (!setcurr) return str - pstr;
+        str++;
+      }
+    }
+
+  function _round(x) {
+      return (x < 0) ? -Math.round(-x) : Math.round(x);
+    }
+
+  function _llvm_bswap_i16(x) {
+      return ((x&0xff)<<8) | ((x>>8)&0xff);
+    }
+
+  var _atan2=Math_atan2;
+
+  var _llvm_pow_f64=Math_pow;
+
+  function _memchr(ptr, chr, num) {
+      chr = unSign(chr);
+      for (var i = 0; i < num; i++) {
+        if (HEAP8[(ptr)] == chr) return ptr;
+        ptr++;
+      }
+      return 0;
+    }
+
+  var _floor=Math_floor;
+
+  function _log10(x) {
+      return Math.log(x) / Math.LN10;
+    }
+
+  var _exp=Math_exp;
+
+  var _fabsf=Math_abs;
+
+  function _sinh(x) {
+      var p = Math.pow(Math.E, x);
+      return (p - (1 / p)) / 2;
+    }
+
+  function ___assert_fail(condition, filename, line, func) {
+      ABORT = true;
+      throw 'Assertion failed: ' + Pointer_stringify(condition) + ', at: ' + [filename ? Pointer_stringify(filename) : 'unknown filename', line, func ? Pointer_stringify(func) : 'unknown function'] + ' at ' + stackTrace();
+    }
+
+  function _llvm_bswap_i32(x) {
+      return ((x&0xff)<<24) | (((x>>8)&0xff)<<16) | (((x>>16)&0xff)<<8) | (x>>>24);
+    }
+
+  function _strcpy(pdest, psrc) {
+      pdest = pdest|0; psrc = psrc|0;
+      var i = 0;
+      do {
+        HEAP8[(((pdest+i)|0)|0)]=HEAP8[(((psrc+i)|0)|0)];
+        i = (i+1)|0;
+      } while (HEAP8[(((psrc)+(i-1))|0)]);
+      return pdest|0;
+    }
+
+  function _llvm_uadd_with_overflow_i32(x, y) {
+      x = x>>>0;
+      y = y>>>0;
+      return tempRet0 = x+y > 4294967295,(x+y)>>>0;
+    }
+
+  function _bsearch(key, base, num, size, compar) {
+      function cmp(x, y) {
+        return FUNCTION_TABLE[compar](x, y);
+      };
+      var left = 0;
+      var right = num;
+      var mid, test, addr;
+  
+      while (left < right) {
+        mid = (left + right) >>> 1;
+        addr = base + (mid * size);
+        test = cmp(key, addr);
+        if (test < 0) {
+          right = mid;
+        } else if (test > 0) {
+          left = mid + 1;
+        } else {
+          return addr;
+        }
+      }
+  
+      return 0;
+    }
+
+  function _access(path, amode) {
+      // int access(const char *path, int amode);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/access.html
+      path = Pointer_stringify(path);
+      if (amode & ~7) {
+        // need a valid mode
+        ___setErrNo(ERRNO_CODES.EINVAL);
+        return -1;
+      }
+      var node;
+      try {
+        var lookup = FS.lookupPath(path, { follow: true });
+        node = lookup.node;
+      } catch (e) {
+        FS.handleFSError(e);
+        return -1;
+      }
+      var perms = '';
+      if (amode & 4) perms += 'r';
+      if (amode & 2) perms += 'w';
+      if (amode & 1) perms += 'x';
+      if (perms /* otherwise, they've just passed F_OK */ && FS.nodePermissions(node, perms)) {
+        ___setErrNo(ERRNO_CODES.EACCES);

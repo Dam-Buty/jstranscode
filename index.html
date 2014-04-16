@@ -8,23 +8,49 @@
 
 <div id="console"></div>
 
-<script type=text/javascript">
+<script src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
+<script type="text/javascript">
 var worker = new Worker("worker.js");
+var outputElement = $("#console");
 
 worker.onmessage = function (event) {
   var message = event.data;
   if (message.type == "ready") {
-    outputElement.textContent = "Loaded";
-    worker.postMessage({
+    outputElement.append("<p>Loaded</p>");
+    /*worker.postMessage({
       type: 'command',
-      arguments: ['-help']
-    })
+      arguments: ['-codecs']
+    });*/
   } else if (message.type == "stdout") {
-    outputElement.textContent += message.data + "\n";
+    outputElement.append("<p>" + message.data + "</p>");
   } else if (message.type == "start") {
-    outputElement.textContent = "Worker has received command\n";
+    outputElement.append("<p>Worker has received command : " + JSON.stringify(message.data) + "</p>");
+  } else if (message.type == "done") {
+    console.log(message.data);
   }
 };
+
+var videoData;
+    
+var oReq = new XMLHttpRequest();
+oReq.open("GET", "sample.avi", true);
+oReq.responseType = "arraybuffer";
+
+oReq.onload = function (oEvent) {
+    var arrayBuffer = oReq.response;
+    if (arrayBuffer) {
+        videoData = new Uint8Array(arrayBuffer);
+        worker.postMessage({
+          type: 'command',
+          arguments: ["-vcodec", "mpeg4", "output.mp4"],
+          files: [videoData]
+        });
+    }
+};
+
+oReq.send(null);
+
+
 
 
 </script>

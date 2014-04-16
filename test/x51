@@ -1,0 +1,1000 @@
+        return -1;
+      }
+      return 0;
+    }
+
+
+  
+  function _stat(path, buf, dontResolveLastLink) {
+      // http://pubs.opengroup.org/onlinepubs/7908799/xsh/stat.html
+      // int stat(const char *path, struct stat *buf);
+      // NOTE: dontResolveLastLink is a shortcut for lstat(). It should never be
+      //       used in client code.
+      path = typeof path !== 'string' ? Pointer_stringify(path) : path;
+      try {
+        var stat = dontResolveLastLink ? FS.lstat(path) : FS.stat(path);
+        HEAP32[((buf)>>2)]=stat.dev;
+        HEAP32[(((buf)+(4))>>2)]=0;
+        HEAP32[(((buf)+(8))>>2)]=stat.ino;
+        HEAP32[(((buf)+(12))>>2)]=stat.mode;
+        HEAP32[(((buf)+(16))>>2)]=stat.nlink;
+        HEAP32[(((buf)+(20))>>2)]=stat.uid;
+        HEAP32[(((buf)+(24))>>2)]=stat.gid;
+        HEAP32[(((buf)+(28))>>2)]=stat.rdev;
+        HEAP32[(((buf)+(32))>>2)]=0;
+        HEAP32[(((buf)+(36))>>2)]=stat.size;
+        HEAP32[(((buf)+(40))>>2)]=4096;
+        HEAP32[(((buf)+(44))>>2)]=stat.blocks;
+        HEAP32[(((buf)+(48))>>2)]=Math.floor(stat.atime.getTime() / 1000);
+        HEAP32[(((buf)+(52))>>2)]=0;
+        HEAP32[(((buf)+(56))>>2)]=Math.floor(stat.mtime.getTime() / 1000);
+        HEAP32[(((buf)+(60))>>2)]=0;
+        HEAP32[(((buf)+(64))>>2)]=Math.floor(stat.ctime.getTime() / 1000);
+        HEAP32[(((buf)+(68))>>2)]=0;
+        HEAP32[(((buf)+(72))>>2)]=stat.ino;
+        return 0;
+      } catch (e) {
+        FS.handleFSError(e);
+        return -1;
+      }
+    }function _fstat(fildes, buf) {
+      // int fstat(int fildes, struct stat *buf);
+      // http://pubs.opengroup.org/onlinepubs/7908799/xsh/fstat.html
+      var stream = FS.getStream(fildes);
+      if (!stream) {
+        ___setErrNo(ERRNO_CODES.EBADF);
+        return -1;
+      }
+      return _stat(stream.path, buf);
+    }
+
+
+
+  function _unlink(path) {
+      // int unlink(const char *path);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/unlink.html
+      path = Pointer_stringify(path);
+      try {
+        FS.unlink(path);
+        return 0;
+      } catch (e) {
+        FS.handleFSError(e);
+        return -1;
+      }
+    }
+
+  function _rmdir(path) {
+      // int rmdir(const char *path);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/rmdir.html
+      path = Pointer_stringify(path);
+      try {
+        FS.rmdir(path);
+        return 0;
+      } catch (e) {
+        FS.handleFSError(e);
+        return -1;
+      }
+    }
+
+  function _rename(old_path, new_path) {
+      // int rename(const char *old, const char *new);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/rename.html
+      old_path = Pointer_stringify(old_path);
+      new_path = Pointer_stringify(new_path);
+      try {
+        FS.rename(old_path, new_path);
+        return 0;
+      } catch (e) {
+        FS.handleFSError(e);
+        return -1;
+      }
+    }
+
+  
+  function _mknod(path, mode, dev) {
+      // int mknod(const char *path, mode_t mode, dev_t dev);
+      // http://pubs.opengroup.org/onlinepubs/7908799/xsh/mknod.html
+      path = Pointer_stringify(path);
+      // we don't want this in the JS API as the JS API
+      // uses mknod to create all nodes.
+      switch (mode & 61440) {
+        case 32768:
+        case 8192:
+        case 24576:
+        case 4096:
+        case 49152:
+          break;
+        default:
+          ___setErrNo(ERRNO_CODES.EINVAL);
+          return -1;
+      }
+      try {
+        FS.mknod(path, mode, dev);
+        return 0;
+      } catch (e) {
+        FS.handleFSError(e);
+        return -1;
+      }
+    }function _mkdir(path, mode) {
+      // int mkdir(const char *path, mode_t mode);
+      // http://pubs.opengroup.org/onlinepubs/7908799/xsh/mkdir.html
+      path = Pointer_stringify(path);
+      try {
+        FS.mkdir(path, mode, 0);
+        return 0;
+      } catch (e) {
+        FS.handleFSError(e);
+        return -1;
+      }
+    }
+
+  function _globfree() {
+  Module['printErr']('missing function: globfree'); abort(-1);
+  }
+
+
+  function _glob() {
+  Module['printErr']('missing function: glob'); abort(-1);
+  }
+
+  var _ceil=Math_ceil;
+
+  function _llrint(x) {
+      x = (x < 0) ? -Math.round(-x) : Math.round(x);
+      return tempRet0 = (tempDouble=x,Math_abs(tempDouble) >= 1 ? (tempDouble > 0 ? Math_min(Math_floor((tempDouble)/4294967296), 4294967295)>>>0 : (~~(Math_ceil((tempDouble - +(((~~(tempDouble)))>>>0))/4294967296)))>>>0) : 0),x>>>0;
+    }
+
+  
+  function __parseInt64(str, endptr, base, min, max, unsign) {
+      var isNegative = false;
+      // Skip space.
+      while (_isspace(HEAP8[(str)])) str++;
+  
+      // Check for a plus/minus sign.
+      if (HEAP8[(str)] == 45) {
+        str++;
+        isNegative = true;
+      } else if (HEAP8[(str)] == 43) {
+        str++;
+      }
+  
+      // Find base.
+      var ok = false;
+      var finalBase = base;
+      if (!finalBase) {
+        if (HEAP8[(str)] == 48) {
+          if (HEAP8[((str+1)|0)] == 120 ||
+              HEAP8[((str+1)|0)] == 88) {
+            finalBase = 16;
+            str += 2;
+          } else {
+            finalBase = 8;
+            ok = true; // we saw an initial zero, perhaps the entire thing is just "0"
+          }
+        }
+      } else if (finalBase==16) {
+        if (HEAP8[(str)] == 48) {
+          if (HEAP8[((str+1)|0)] == 120 ||
+              HEAP8[((str+1)|0)] == 88) {
+            str += 2;
+          }
+        }
+      }
+      if (!finalBase) finalBase = 10;
+      var start = str;
+  
+      // Get digits.
+      var chr;
+      while ((chr = HEAP8[(str)]) != 0) {
+        var digit = parseInt(String.fromCharCode(chr), finalBase);
+        if (isNaN(digit)) {
+          break;
+        } else {
+          str++;
+          ok = true;
+        }
+      }
+  
+      if (!ok) {
+        ___setErrNo(ERRNO_CODES.EINVAL);
+        return tempRet0 = 0,0;
+      }
+  
+      // Set end pointer.
+      if (endptr) {
+        HEAP32[((endptr)>>2)]=str;
+      }
+  
+      try {
+        var numberString = isNegative ? '-'+Pointer_stringify(start, str - start) : Pointer_stringify(start, str - start);
+        i64Math.fromString(numberString, finalBase, min, max, unsign);
+      } catch(e) {
+        ___setErrNo(ERRNO_CODES.ERANGE); // not quite correct
+      }
+  
+      return tempRet0 = HEAP32[(((tempDoublePtr)+(4))>>2)],HEAP32[((tempDoublePtr)>>2)];
+    }function _strtoll(str, endptr, base) {
+      return __parseInt64(str, endptr, base, '-9223372036854775808', '9223372036854775807');  // LLONG_MIN, LLONG_MAX.
+    }
+
+  
+  function _trunc(x) {
+      return (x < 0) ? Math.ceil(x) : Math.floor(x);
+    }var _truncf=_trunc;
+
+  var _expf=Math_exp;
+
+  function _strtoul(str, endptr, base) {
+      return __parseInt(str, endptr, base, 0, 4294967295, 32, true);  // ULONG_MAX.
+    }
+
+  var _log2f=_log2;
+
+  function _exp2(x) {
+      return Math.pow(2, x);
+    }
+
+  var _llvm_pow_f32=Math_pow;
+
+  var _atan=Math_atan;
+
+
+  var _exp2f=_exp2;
+
+  var _tan=Math_tan;
+
+  function _frexp(x, exp_addr) {
+      var sig = 0, exp_ = 0;
+      if (x !== 0) {
+        var sign = 1;
+        if (x < 0) {
+          x = -x;
+          sign = -1;
+        }
+        var raw_exp = Math.log(x)/Math.log(2);
+        exp_ = Math.ceil(raw_exp);
+        if (exp_ === raw_exp) exp_ += 1;
+        sig = sign*x/Math.pow(2, exp_);
+      }
+      HEAP32[((exp_addr)>>2)]=exp_;
+      return sig;
+    }
+
+  var _floorf=Math_floor;
+
+  var _sinf=Math_sin;
+
+  var _log10f=_log10;
+
+  var _cosf=Math_cos;
+
+  var _cbrtf=_cbrt;
+
+  var _atan2f=Math_atan2;
+
+  var _atanf=Math_atan;
+
+  var _llrintf=_llrint;
+
+  function _sysconf(name) {
+      // long sysconf(int name);
+      // http://pubs.opengroup.org/onlinepubs/009695399/functions/sysconf.html
+      switch(name) {
+        case 30: return PAGE_SIZE;
+        case 132:
+        case 133:
+        case 12:
+        case 137:
+        case 138:
+        case 15:
+        case 235:
+        case 16:
+        case 17:
+        case 18:
+        case 19:
+        case 20:
+        case 149:
+        case 13:
+        case 10:
+        case 236:
+        case 153:
+        case 9:
+        case 21:
+        case 22:
+        case 159:
+        case 154:
+        case 14:
+        case 77:
+        case 78:
+        case 139:
+        case 80:
+        case 81:
+        case 79:
+        case 82:
+        case 68:
+        case 67:
+        case 164:
+        case 11:
+        case 29:
+        case 47:
+        case 48:
+        case 95:
+        case 52:
+        case 51:
+        case 46:
+          return 200809;
+        case 27:
+        case 246:
+        case 127:
+        case 128:
+        case 23:
+        case 24:
+        case 160:
+        case 161:
+        case 181:
+        case 182:
+        case 242:
+        case 183:
+        case 184:
+        case 243:
+        case 244:
+        case 245:
+        case 165:
+        case 178:
+        case 179:
+        case 49:
+        case 50:
+        case 168:
+        case 169:
+        case 175:
+        case 170:
+        case 171:
+        case 172:
+        case 97:
+        case 76:
+        case 32:
+        case 173:
+        case 35:
+          return -1;
+        case 176:
+        case 177:
+        case 7:
+        case 155:
+        case 8:
+        case 157:
+        case 125:
+        case 126:
+        case 92:
+        case 93:
+        case 129:
+        case 130:
+        case 131:
+        case 94:
+        case 91:
+          return 1;
+        case 74:
+        case 60:
+        case 69:
+        case 70:
+        case 4:
+          return 1024;
+        case 31:
+        case 42:
+        case 72:
+          return 32;
+        case 87:
+        case 26:
+        case 33:
+          return 2147483647;
+        case 34:
+        case 1:
+          return 47839;
+        case 38:
+        case 36:
+          return 99;
+        case 43:
+        case 37:
+          return 2048;
+        case 0: return 2097152;
+        case 3: return 65536;
+        case 28: return 32768;
+        case 44: return 32767;
+        case 75: return 16384;
+        case 39: return 1000;
+        case 89: return 700;
+        case 71: return 256;
+        case 40: return 255;
+        case 2: return 100;
+        case 180: return 64;
+        case 25: return 20;
+        case 5: return 16;
+        case 6: return 6;
+        case 73: return 4;
+        case 84: return 1;
+      }
+      ___setErrNo(ERRNO_CODES.EINVAL);
+      return -1;
+    }
+
+
+
+  function _cosh(x) {
+      var p = Math.pow(Math.E, x);
+      return (p + (1 / p)) / 2;
+    }
+
+  function _tanh(x) {
+      return _sinh(x) / _cosh(x);
+    }
+
+  var _asin=Math_asin;
+
+  var _acos=Math_acos;
+
+  function _mmap(start, num, prot, flags, fd, offset) {
+      /* FIXME: Since mmap is normally implemented at the kernel level,
+       * this implementation simply uses malloc underneath the call to
+       * mmap.
+       */
+      var MAP_PRIVATE = 2;
+      var ptr;
+      var allocated = false;
+  
+      if (!_mmap.mappings) _mmap.mappings = {};
+  
+      if (fd == -1) {
+        ptr = _malloc(num);
+        if (!ptr) return -1;
+        _memset(ptr, 0, num);
+        allocated = true;
+      } else {
+        var info = FS.getStream(fd);
+        if (!info) return -1;
+        try {
+          var res = FS.mmap(info, HEAPU8, start, num, offset, prot, flags);
+          ptr = res.ptr;
+          allocated = res.allocated;
+        } catch (e) {
+          FS.handleFSError(e);
+          return -1;
+        }
+      }
+  
+      _mmap.mappings[ptr] = { malloc: ptr, num: num, allocated: allocated };
+      return ptr;
+    }
+
+  function _munmap(start, num) {
+      if (!_mmap.mappings) _mmap.mappings = {};
+      // TODO: support unmmap'ing parts of allocations
+      var info = _mmap.mappings[start];
+      if (!info) return 0;
+      if (num == info.num) {
+        _mmap.mappings[start] = null;
+        if (info.allocated) {
+          _free(info.malloc);
+        }
+      }
+      return 0;
+    }
+
+
+  function _fcntl(fildes, cmd, varargs, dup2) {
+      // int fcntl(int fildes, int cmd, ...);
+      // http://pubs.opengroup.org/onlinepubs/009695399/functions/fcntl.html
+      var stream = FS.getStream(fildes);
+      if (!stream) {
+        ___setErrNo(ERRNO_CODES.EBADF);
+        return -1;
+      }
+      switch (cmd) {
+        case 0:
+          var arg = HEAP32[((varargs)>>2)];
+          if (arg < 0) {
+            ___setErrNo(ERRNO_CODES.EINVAL);
+            return -1;
+          }
+          var newStream;
+          try {
+            newStream = FS.open(stream.path, stream.flags, 0, arg);
+          } catch (e) {
+            FS.handleFSError(e);
+            return -1;
+          }
+          return newStream.fd;
+        case 1:
+        case 2:
+          return 0;  // FD_CLOEXEC makes no sense for a single process.
+        case 3:
+          return stream.flags;
+        case 4:
+          var arg = HEAP32[((varargs)>>2)];
+          stream.flags |= arg;
+          return 0;
+        case 12:
+        case 12:
+          var arg = HEAP32[((varargs)>>2)];
+          var offset = 0;
+          // We're always unlocked.
+          HEAP16[(((arg)+(offset))>>1)]=2;
+          return 0;
+        case 13:
+        case 14:
+        case 13:
+        case 14:
+          // Pretend that the locking is successful.
+          return 0;
+        case 8:
+        case 9:
+          // These are for sockets. We don't have them fully implemented yet.
+          ___setErrNo(ERRNO_CODES.EINVAL);
+          return -1;
+        default:
+          ___setErrNo(ERRNO_CODES.EINVAL);
+          return -1;
+      }
+      // Should never be reached. Only to silence strict warnings.
+      return -1;
+    }
+
+  function _llvm_uadd_with_overflow_i64(a, b, c, d) {
+      a = a|0; b = b|0; c = c|0; d = d|0;
+      var l = 0, h = 0, overflow = 0;
+      l = (a + c)>>>0;
+      h = (b + d)>>>0;
+      overflow = ((h>>>0) < (b>>>0))|0; // Return whether addition overflowed even the high word.
+      if ((l>>>0) < (a>>>0)) {
+        h = (h + 1)>>>0; // Add carry from low word to high word on overflow.
+        overflow = overflow | (!h); // Check again for overflow.
+      }
+      return tempRet0 = h,tempRet1 = overflow,l|0;
+    }
+
+  function _mktime(tmPtr) {
+      _tzset();
+      var year = HEAP32[(((tmPtr)+(20))>>2)];
+      var timestamp = new Date(year >= 1900 ? year : year + 1900,
+                               HEAP32[(((tmPtr)+(16))>>2)],
+                               HEAP32[(((tmPtr)+(12))>>2)],
+                               HEAP32[(((tmPtr)+(8))>>2)],
+                               HEAP32[(((tmPtr)+(4))>>2)],
+                               HEAP32[((tmPtr)>>2)],
+                               0).getTime() / 1000;
+      HEAP32[(((tmPtr)+(24))>>2)]=new Date(timestamp).getDay();
+      var yday = Math.round((timestamp - (new Date(year, 0, 1)).getTime()) / (1000 * 60 * 60 * 24));
+      HEAP32[(((tmPtr)+(28))>>2)]=yday;
+      return timestamp;
+    }
+
+  function _clock() {
+      if (_clock.start === undefined) _clock.start = Date.now();
+      return Math.floor((Date.now() - _clock.start) * (1000000/1000));
+    }
+
+  function _gettimeofday(ptr) {
+      var now = Date.now();
+      HEAP32[((ptr)>>2)]=Math.floor(now/1000); // seconds
+      HEAP32[(((ptr)+(4))>>2)]=Math.floor((now-1000*Math.floor(now/1000))*1000); // microseconds
+      return 0;
+    }
+
+  
+  function _usleep(useconds) {
+      // int usleep(useconds_t useconds);
+      // http://pubs.opengroup.org/onlinepubs/000095399/functions/usleep.html
+      // We're single-threaded, so use a busy loop. Super-ugly.
+      var msec = useconds / 1000;
+      if (ENVIRONMENT_IS_WEB && window['performance'] && window['performance']['now']) {
+        var start = window['performance']['now']();
+        while (window['performance']['now']() - start < msec) {
+          // Do nothing.
+        }
+      } else {
+        var start = Date.now();
+        while (Date.now() - start < msec) {
+          // Do nothing.
+        }
+      }
+      return 0;
+    }function _nanosleep(rqtp, rmtp) {
+      // int nanosleep(const struct timespec  *rqtp, struct timespec *rmtp);
+      var seconds = HEAP32[((rqtp)>>2)];
+      var nanoseconds = HEAP32[(((rqtp)+(4))>>2)];
+      if (rmtp !== 0) {
+        HEAP32[((rmtp)>>2)]=0;
+        HEAP32[(((rmtp)+(4))>>2)]=0;
+      }
+      return _usleep((seconds * 1e6) + (nanoseconds / 1000));
+    }
+
+
+  function _llvm_lifetime_start() {}
+
+  function _llvm_lifetime_end() {}
+
+  function _sbrk(bytes) {
+      // Implement a Linux-like 'memory area' for our 'process'.
+      // Changes the size of the memory area by |bytes|; returns the
+      // address of the previous top ('break') of the memory area
+      // We control the "dynamic" memory - DYNAMIC_BASE to DYNAMICTOP
+      var self = _sbrk;
+      if (!self.called) {
+        DYNAMICTOP = alignMemoryPage(DYNAMICTOP); // make sure we start out aligned
+        self.called = true;
+        assert(Runtime.dynamicAlloc);
+        self.alloc = Runtime.dynamicAlloc;
+        Runtime.dynamicAlloc = function() { abort('cannot dynamically allocate, sbrk now has control') };
+      }
+      var ret = DYNAMICTOP;
+      if (bytes != 0) self.alloc(bytes);
+      return ret;  // Previous break location.
+    }
+
+  
+  function _copysign(a, b) {
+      return __reallyNegative(a) === __reallyNegative(b) ? a : -a;
+    }var _copysignl=_copysign;
+
+  
+  function _fmod(x, y) {
+      return x % y;
+    }var _fmodl=_fmod;
+
+
+
+
+
+
+  var Browser={mainLoop:{scheduler:null,method:"",shouldPause:false,paused:false,queue:[],pause:function () {
+          Browser.mainLoop.shouldPause = true;
+        },resume:function () {
+          if (Browser.mainLoop.paused) {
+            Browser.mainLoop.paused = false;
+            Browser.mainLoop.scheduler();
+          }
+          Browser.mainLoop.shouldPause = false;
+        },updateStatus:function () {
+          if (Module['setStatus']) {
+            var message = Module['statusMessage'] || 'Please wait...';
+            var remaining = Browser.mainLoop.remainingBlockers;
+            var expected = Browser.mainLoop.expectedBlockers;
+            if (remaining) {
+              if (remaining < expected) {
+                Module['setStatus'](message + ' (' + (expected - remaining) + '/' + expected + ')');
+              } else {
+                Module['setStatus'](message);
+              }
+            } else {
+              Module['setStatus']('');
+            }
+          }
+        }},isFullScreen:false,pointerLock:false,moduleContextCreatedCallbacks:[],workers:[],init:function () {
+        if (!Module["preloadPlugins"]) Module["preloadPlugins"] = []; // needs to exist even in workers
+  
+        if (Browser.initted || ENVIRONMENT_IS_WORKER) return;
+        Browser.initted = true;
+  
+        try {
+          new Blob();
+          Browser.hasBlobConstructor = true;
+        } catch(e) {
+          Browser.hasBlobConstructor = false;
+          console.log("warning: no blob constructor, cannot create blobs with mimetypes");
+        }
+        Browser.BlobBuilder = typeof MozBlobBuilder != "undefined" ? MozBlobBuilder : (typeof WebKitBlobBuilder != "undefined" ? WebKitBlobBuilder : (!Browser.hasBlobConstructor ? console.log("warning: no BlobBuilder") : null));
+        Browser.URLObject = typeof window != "undefined" ? (window.URL ? window.URL : window.webkitURL) : undefined;
+        if (!Module.noImageDecoding && typeof Browser.URLObject === 'undefined') {
+          console.log("warning: Browser does not support creating object URLs. Built-in browser image decoding will not be available.");
+          Module.noImageDecoding = true;
+        }
+  
+        // Support for plugins that can process preloaded files. You can add more of these to
+        // your app by creating and appending to Module.preloadPlugins.
+        //
+        // Each plugin is asked if it can handle a file based on the file's name. If it can,
+        // it is given the file's raw data. When it is done, it calls a callback with the file's
+        // (possibly modified) data. For example, a plugin might decompress a file, or it
+        // might create some side data structure for use later (like an Image element, etc.).
+  
+        var imagePlugin = {};
+        imagePlugin['canHandle'] = function imagePlugin_canHandle(name) {
+          return !Module.noImageDecoding && /\.(jpg|jpeg|png|bmp)$/i.test(name);
+        };
+        imagePlugin['handle'] = function imagePlugin_handle(byteArray, name, onload, onerror) {
+          var b = null;
+          if (Browser.hasBlobConstructor) {
+            try {
+              b = new Blob([byteArray], { type: Browser.getMimetype(name) });
+              if (b.size !== byteArray.length) { // Safari bug #118630
+                // Safari's Blob can only take an ArrayBuffer
+                b = new Blob([(new Uint8Array(byteArray)).buffer], { type: Browser.getMimetype(name) });
+              }
+            } catch(e) {
+              Runtime.warnOnce('Blob constructor present but fails: ' + e + '; falling back to blob builder');
+            }
+          }
+          if (!b) {
+            var bb = new Browser.BlobBuilder();
+            bb.append((new Uint8Array(byteArray)).buffer); // we need to pass a buffer, and must copy the array to get the right data range
+            b = bb.getBlob();
+          }
+          var url = Browser.URLObject.createObjectURL(b);
+          var img = new Image();
+          img.onload = function img_onload() {
+            assert(img.complete, 'Image ' + name + ' could not be decoded');
+            var canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            Module["preloadedImages"][name] = canvas;
+            Browser.URLObject.revokeObjectURL(url);
+            if (onload) onload(byteArray);
+          };
+          img.onerror = function img_onerror(event) {
+            console.log('Image ' + url + ' could not be decoded');
+            if (onerror) onerror();
+          };
+          img.src = url;
+        };
+        Module['preloadPlugins'].push(imagePlugin);
+  
+        var audioPlugin = {};
+        audioPlugin['canHandle'] = function audioPlugin_canHandle(name) {
+          return !Module.noAudioDecoding && name.substr(-4) in { '.ogg': 1, '.wav': 1, '.mp3': 1 };
+        };
+        audioPlugin['handle'] = function audioPlugin_handle(byteArray, name, onload, onerror) {
+          var done = false;
+          function finish(audio) {
+            if (done) return;
+            done = true;
+            Module["preloadedAudios"][name] = audio;
+            if (onload) onload(byteArray);
+          }
+          function fail() {
+            if (done) return;
+            done = true;
+            Module["preloadedAudios"][name] = new Audio(); // empty shim
+            if (onerror) onerror();
+          }
+          if (Browser.hasBlobConstructor) {
+            try {
+              var b = new Blob([byteArray], { type: Browser.getMimetype(name) });
+            } catch(e) {
+              return fail();
+            }
+            var url = Browser.URLObject.createObjectURL(b); // XXX we never revoke this!
+            var audio = new Audio();
+            audio.addEventListener('canplaythrough', function() { finish(audio) }, false); // use addEventListener due to chromium bug 124926
+            audio.onerror = function audio_onerror(event) {
+              if (done) return;
+              console.log('warning: browser could not fully decode audio ' + name + ', trying slower base64 approach');
+              function encode64(data) {
+                var BASE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+                var PAD = '=';
+                var ret = '';
+                var leftchar = 0;
+                var leftbits = 0;
+                for (var i = 0; i < data.length; i++) {
+                  leftchar = (leftchar << 8) | data[i];
+                  leftbits += 8;
+                  while (leftbits >= 6) {
+                    var curr = (leftchar >> (leftbits-6)) & 0x3f;
+                    leftbits -= 6;
+                    ret += BASE[curr];
+                  }
+                }
+                if (leftbits == 2) {
+                  ret += BASE[(leftchar&3) << 4];
+                  ret += PAD + PAD;
+                } else if (leftbits == 4) {
+                  ret += BASE[(leftchar&0xf) << 2];
+                  ret += PAD;
+                }
+                return ret;
+              }
+              audio.src = 'data:audio/x-' + name.substr(-3) + ';base64,' + encode64(byteArray);
+              finish(audio); // we don't wait for confirmation this worked - but it's worth trying
+            };
+            audio.src = url;
+            // workaround for chrome bug 124926 - we do not always get oncanplaythrough or onerror
+            Browser.safeSetTimeout(function() {
+              finish(audio); // try to use it even though it is not necessarily ready to play
+            }, 10000);
+          } else {
+            return fail();
+          }
+        };
+        Module['preloadPlugins'].push(audioPlugin);
+  
+        // Canvas event setup
+  
+        var canvas = Module['canvas'];
+        canvas.requestPointerLock = canvas['requestPointerLock'] ||
+                                    canvas['mozRequestPointerLock'] ||
+                                    canvas['webkitRequestPointerLock'];
+        canvas.exitPointerLock = document['exitPointerLock'] ||
+                                 document['mozExitPointerLock'] ||
+                                 document['webkitExitPointerLock'] ||
+                                 function(){}; // no-op if function does not exist
+        canvas.exitPointerLock = canvas.exitPointerLock.bind(document);
+  
+        function pointerLockChange() {
+          Browser.pointerLock = document['pointerLockElement'] === canvas ||
+                                document['mozPointerLockElement'] === canvas ||
+                                document['webkitPointerLockElement'] === canvas;
+        }
+  
+        document.addEventListener('pointerlockchange', pointerLockChange, false);
+        document.addEventListener('mozpointerlockchange', pointerLockChange, false);
+        document.addEventListener('webkitpointerlockchange', pointerLockChange, false);
+  
+        if (Module['elementPointerLock']) {
+          canvas.addEventListener("click", function(ev) {
+            if (!Browser.pointerLock && canvas.requestPointerLock) {
+              canvas.requestPointerLock();
+              ev.preventDefault();
+            }
+          }, false);
+        }
+      },createContext:function (canvas, useWebGL, setInModule, webGLContextAttributes) {
+        var ctx;
+        var errorInfo = '?';
+        function onContextCreationError(event) {
+          errorInfo = event.statusMessage || errorInfo;
+        }
+        try {
+          if (useWebGL) {
+            var contextAttributes = {
+              antialias: false,
+              alpha: false
+            };
+  
+            if (webGLContextAttributes) {
+              for (var attribute in webGLContextAttributes) {
+                contextAttributes[attribute] = webGLContextAttributes[attribute];
+              }
+            }
+  
+  
+            canvas.addEventListener('webglcontextcreationerror', onContextCreationError, false);
+            try {
+              ['experimental-webgl', 'webgl'].some(function(webglId) {
+                return ctx = canvas.getContext(webglId, contextAttributes);
+              });
+            } finally {
+              canvas.removeEventListener('webglcontextcreationerror', onContextCreationError, false);
+            }
+          } else {
+            ctx = canvas.getContext('2d');
+          }
+          if (!ctx) throw ':(';
+        } catch (e) {
+          Module.print('Could not create canvas: ' + [errorInfo, e]);
+          return null;
+        }
+        if (useWebGL) {
+          // Set the background of the WebGL canvas to black
+          canvas.style.backgroundColor = "black";
+  
+          // Warn on context loss
+          canvas.addEventListener('webglcontextlost', function(event) {
+            alert('WebGL context lost. You will need to reload the page.');
+          }, false);
+        }
+        if (setInModule) {
+          GLctx = Module.ctx = ctx;
+          Module.useWebGL = useWebGL;
+          Browser.moduleContextCreatedCallbacks.forEach(function(callback) { callback() });
+          Browser.init();
+        }
+        return ctx;
+      },destroyContext:function (canvas, useWebGL, setInModule) {},fullScreenHandlersInstalled:false,lockPointer:undefined,resizeCanvas:undefined,requestFullScreen:function (lockPointer, resizeCanvas) {
+        Browser.lockPointer = lockPointer;
+        Browser.resizeCanvas = resizeCanvas;
+        if (typeof Browser.lockPointer === 'undefined') Browser.lockPointer = true;
+        if (typeof Browser.resizeCanvas === 'undefined') Browser.resizeCanvas = false;
+  
+        var canvas = Module['canvas'];
+        function fullScreenChange() {
+          Browser.isFullScreen = false;
+          if ((document['webkitFullScreenElement'] || document['webkitFullscreenElement'] ||
+               document['mozFullScreenElement'] || document['mozFullscreenElement'] ||
+               document['fullScreenElement'] || document['fullscreenElement']) === canvas) {
+            canvas.cancelFullScreen = document['cancelFullScreen'] ||
+                                      document['mozCancelFullScreen'] ||
+                                      document['webkitCancelFullScreen'];
+            canvas.cancelFullScreen = canvas.cancelFullScreen.bind(document);
+            if (Browser.lockPointer) canvas.requestPointerLock();
+            Browser.isFullScreen = true;
+            if (Browser.resizeCanvas) Browser.setFullScreenCanvasSize();
+          } else if (Browser.resizeCanvas){
+            Browser.setWindowedCanvasSize();
+          }
+          if (Module['onFullScreen']) Module['onFullScreen'](Browser.isFullScreen);
+        }
+  
+        if (!Browser.fullScreenHandlersInstalled) {
+          Browser.fullScreenHandlersInstalled = true;
+          document.addEventListener('fullscreenchange', fullScreenChange, false);
+          document.addEventListener('mozfullscreenchange', fullScreenChange, false);
+          document.addEventListener('webkitfullscreenchange', fullScreenChange, false);
+        }
+  
+        canvas.requestFullScreen = canvas['requestFullScreen'] ||
+                                   canvas['mozRequestFullScreen'] ||
+                                   (canvas['webkitRequestFullScreen'] ? function() { canvas['webkitRequestFullScreen'](Element['ALLOW_KEYBOARD_INPUT']) } : null);
+        canvas.requestFullScreen();
+      },requestAnimationFrame:function requestAnimationFrame(func) {
+        if (typeof window === 'undefined') { // Provide fallback to setTimeout if window is undefined (e.g. in Node.js)
+          setTimeout(func, 1000/60);
+        } else {
+          if (!window.requestAnimationFrame) {
+            window.requestAnimationFrame = window['requestAnimationFrame'] ||
+                                           window['mozRequestAnimationFrame'] ||
+                                           window['webkitRequestAnimationFrame'] ||
+                                           window['msRequestAnimationFrame'] ||
+                                           window['oRequestAnimationFrame'] ||
+                                           window['setTimeout'];
+          }
+          window.requestAnimationFrame(func);
+        }
+      },safeCallback:function (func) {
+        return function() {
+          if (!ABORT) return func.apply(null, arguments);
+        };
+      },safeRequestAnimationFrame:function (func) {
+        return Browser.requestAnimationFrame(function() {
+          if (!ABORT) func();
+        });
+      },safeSetTimeout:function (func, timeout) {
+        return setTimeout(function() {
+          if (!ABORT) func();
+        }, timeout);
+      },safeSetInterval:function (func, timeout) {
+        return setInterval(function() {
+          if (!ABORT) func();
+        }, timeout);
+      },getMimetype:function (name) {
+        return {
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'bmp': 'image/bmp',
+          'ogg': 'audio/ogg',
+          'wav': 'audio/wav',
+          'mp3': 'audio/mpeg'
+        }[name.substr(name.lastIndexOf('.')+1)];
+      },getUserMedia:function (func) {
+        if(!window.getUserMedia) {
+          window.getUserMedia = navigator['getUserMedia'] ||
+                                navigator['mozGetUserMedia'];
+        }
+        window.getUserMedia(func);
+      },getMovementX:function (event) {
+        return event['movementX'] ||
+               event['mozMovementX'] ||
+               event['webkitMovementX'] ||
+               0;
+      },getMovementY:function (event) {
+        return event['movementY'] ||
+               event['mozMovementY'] ||
+               event['webkitMovementY'] ||
+               0;
+      },getMouseWheelDelta:function (event) {
+        return Math.max(-1, Math.min(1, event.type === 'DOMMouseScroll' ? event.detail : -event.wheelDelta));
+      },mouseX:0,mouseY:0,mouseMovementX:0,mouseMovementY:0,calculateMouseEvent:function (event) { // event should be mousemove, mousedown or mouseup
+        if (Browser.pointerLock) {
+          // When the pointer is locked, calculate the coordinates
+          // based on the movement of the mouse.
+          // Workaround for Firefox bug 764498
+          if (event.type != 'mousemove' &&
+              ('mozMovementX' in event)) {
+            Browser.mouseMovementX = Browser.mouseMovementY = 0;
+          } else {
+            Browser.mouseMovementX = Browser.getMovementX(event);
+            Browser.mouseMovementY = Browser.getMovementY(event);
+          }
+          
+          // check if SDL is available
+          if (typeof SDL != "undefined") {
